@@ -108,7 +108,7 @@ class BuySellSignal(bt.Indicator):
     
     params = (
         ('duration_threshold', 20),
-        ('close_threshold', 0.85),
+        ('close_threshold', 0.5),
     )
     
     def __init__(self):
@@ -119,15 +119,16 @@ class BuySellSignal(bt.Indicator):
     def next(self):
         self.lines.suspect_signal[0] = 0
         self.lines.confirm_signal[0] = 0
+        close = self.data.close[0]
         # 判断确认信号
-        if self.lines.suspect_signal[-1] != 0 and self.lines.suspect_signal[-1] == self.lines.suspect_signal[0]:
+        if self.lines.suspect_signal[-1] != 0:
             high = self.data.high[0]
             low = self.data.low[0]
             
-            if self.lines.suspect_signal[0] == 1 and close >= (high - (high - low) * (1 - self.p.close_threshold)):
+            if self.lines.suspect_signal[-1] == 1 and close >= (high - (high - low) * (1 - self.p.close_threshold)):
                 self.lines.confirm_signal[0] = 2
                 return
-            elif self.lines.suspect_signal[0] == -1 and close <= (low + (high - low) * (1 - self.p.close_threshold)):
+            elif self.lines.suspect_signal[-1] == -1 and close <= (low + (high - low) * (1 - self.p.close_threshold)):
                 self.lines.confirm_signal[0] = -2
                 return
 
@@ -147,7 +148,6 @@ class BuySellSignal(bt.Indicator):
         if math.isnan(prev_upper) or math.isnan(prev_lower):
             return
         
-        close = self.data.close[0]
         if close <= prev_upper and close >= prev_lower:
             return
         
