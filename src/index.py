@@ -15,6 +15,7 @@ from bokeh.models import ColumnDataSource
 from indicators.range_zone import RangeZone, RangeZonePhaseIndicator
 from indicators import StdDevRange, ConsolidationIndicator
 from indicators.std_dev_range import BuySellSignal, ConsolidationDuration, LinearRegressionTrend
+from strategies import ConfirmSignalStrategy
 
 class CSVData(bt.feeds.GenericCSVData):
     params = (
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     print(f'成功加载数据文件: {data_path}, 数据长度: {data_length}')
     
     cerebro = bt.Cerebro()
-    cerebro.addstrategy(MyStrategy)
+    cerebro.addstrategy(ConfirmSignalStrategy)
     data = CSVData(dataname=temp_path)
     cerebro.adddata(data)
     cerebro.run()
