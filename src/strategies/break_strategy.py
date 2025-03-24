@@ -83,17 +83,17 @@ class ConfirmSignalStrategy(bt.Strategy):
         direction = "买入" if self.confirm_signal[0] > 0 else "卖出"
         
         
-        entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop) if self.confirm_signal[0] > 0 \
-                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop)
+        entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False) if self.confirm_signal[0] > 0 \
+                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False)
 
         self.log(f"设定入场订单{entry_order.ref}: 价格={entry_price:.2f}, 方向={direction}, 金额={size * entry_price:.2f}")
         
-        stop_order = self.sell(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order) if self.confirm_signal[0] > 0 \
-                     else self.buy(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order)
+        stop_order = self.sell(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order, transmit=False) if self.confirm_signal[0] > 0 \
+                     else self.buy(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order, transmit=False)
         self.log(f"设定止损订单{stop_order.ref}: 价格={stop_loss_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * stop_loss_price:.2f}")
         
-        limit_order = self.sell(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order) if self.confirm_signal[0] > 0 \
-                      else self.buy(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order)
+        limit_order = self.sell(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order, transmit=True) if self.confirm_signal[0] > 0 \
+                      else self.buy(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order, transmit=True)
         self.log(f"设定止盈订单{limit_order.ref}: 价格={target_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * target_price:.2f}")
         
         self.orders[entry_order.ref] = (stop_order.ref, limit_order.ref)
