@@ -76,41 +76,54 @@ class ConfirmSignalStrategy(bt.Strategy):
         
         cash = self.broker.get_cash()
         size = (cash * self.p.risk_per_trade) / risk
+
+        # 计算最大可购买的 size，避免超出资金
+        max_size = cash / entry_price
+        size = min(size, max_size)
         direction = "买入" if self.confirm_signal[0] > 0 else "卖出"
         
-        self.log(f"设定入场订单: 价格={entry_price:.2f}, 方向={direction}, 金额={size * entry_price:.2f}")
         
         entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop) if self.confirm_signal[0] > 0 \
                       else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop)
+
+        self.log(f"设定入场订单{entry_order.ref}: 价格={entry_price:.2f}, 方向={direction}, 金额={size * entry_price:.2f}")
         
         stop_order = self.sell(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order) if self.confirm_signal[0] > 0 \
                      else self.buy(price=stop_loss_price, size=size, exectype=bt.Order.Stop, parent=entry_order)
+        self.log(f"设定止损订单{stop_order.ref}: 价格={stop_loss_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * stop_loss_price:.2f}")
         
         limit_order = self.sell(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order) if self.confirm_signal[0] > 0 \
                       else self.buy(price=target_price, size=size, exectype=bt.Order.Limit, parent=entry_order)
+        self.log(f"设定止盈订单{limit_order.ref}: 价格={target_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * target_price:.2f}")
         
         self.orders[entry_order.ref] = (stop_order.ref, limit_order.ref)
         
-        self.log(f"设定止损订单: 价格={stop_loss_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * stop_loss_price:.2f}")
-        self.log(f"设定止盈订单: 价格={target_price:.2f}, 方向={'卖出' if self.confirm_signal[0] > 0 else '买入'}, 金额={size * target_price:.2f}")
     
     def notify_order(self, order):
-        if order.status == bt.Order.Completed:
-            order_type = "入场订单" if order.ref in self.orders else "止盈离场" if order.ref in [v[1] for v in self.orders.values()] else "止损离场"
+        self.log(f"aaaaa {order.ref} {order.getstatusname()}")
+        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
+            order_type = "入场订单" if order.ref in self.orders else \
+                        "止盈订单" if any(order.ref == v[1] for v in self.orders.values()) else \
+                        "止损订单"
+
             direction = "买入" if order.isbuy() else "卖出"
-            self.log(f"订单成交 ({order_type}): 价格={order.executed.price:.2f}, 方向={direction}, 金额={order.executed.size * order.executed.price:.2f}")
+            self.log(f"订单状态变更 ({order_type}): 价格={order.executed.price:.2f}, 方向={direction}, 数量={order.executed.size}, 状态={order.getstatusname()}")
+
+            if order.status == bt.Order.Completed:
+                for entry_ref, (stop_ref, limit_ref) in list(self.orders.items()):
+                    if order.ref == stop_ref:
+                        self.cancel(limit_ref)  # 取消止盈订单
+                        del self.orders[entry_ref]
+                        self.log(f"止损订单执行，取消止盈订单 {limit_ref}")
+                        break
+                    elif order.ref == limit_ref:
+                        self.cancel(stop_ref)  # 取消止损订单
+                        del self.orders[entry_ref]
+                        self.log(f"止盈订单执行，取消止损订单 {stop_ref}")
+                        break
             
-            for entry_ref, (stop_ref, limit_ref) in list(self.orders.items()):
-                if order.ref == stop_ref:
-                    self.cancel(self.orders[entry_ref][1])  # 取消止盈订单
-                    del self.orders[entry_ref]
-                    break
-                elif order.ref == limit_ref:
-                    self.cancel(self.orders[entry_ref][0])  # 取消止损订单
-                    del self.orders[entry_ref]
-                    break
-        
-        elif order.status in [bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
-            for entry_ref in list(self.orders.keys()):
-                if order.ref == entry_ref:
-                    del self.orders[entry_ref]
+            elif order.status in [bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
+                for entry_ref in list(self.orders.keys()):
+                    if order.ref == entry_ref:
+                        self.log(f"入场订单 {order.ref} 被取消，原因: {order.getstatusname()}")
+                        del self.orders[entry_ref]
