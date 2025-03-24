@@ -84,7 +84,7 @@ class ConfirmSignalStrategy(bt.Strategy):
         
         
         entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False) if self.confirm_signal[0] > 0 \
-                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False)
+                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False, valid=2)
 
         self.log(f"设定入场订单{entry_order.ref}: 价格={entry_price:.2f}, 方向={direction}, 金额={size * entry_price:.2f}")
         
@@ -100,7 +100,6 @@ class ConfirmSignalStrategy(bt.Strategy):
         
     
     def notify_order(self, order):
-        self.log(f"aaaaa {order.ref} {order.getstatusname()}")
         if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
             order_type = "入场订单" if order.ref in self.orders else \
                         "止盈订单" if any(order.ref == v[1] for v in self.orders.values()) else \
@@ -112,17 +111,13 @@ class ConfirmSignalStrategy(bt.Strategy):
             if order.status == bt.Order.Completed:
                 for entry_ref, (stop_ref, limit_ref) in list(self.orders.items()):
                     if order.ref == stop_ref:
-                        self.cancel(limit_ref)  # 取消止盈订单
                         del self.orders[entry_ref]
-                        self.log(f"止损订单执行，取消止盈订单 {limit_ref}")
                         break
                     elif order.ref == limit_ref:
-                        self.cancel(stop_ref)  # 取消止损订单
                         del self.orders[entry_ref]
-                        self.log(f"止盈订单执行，取消止损订单 {stop_ref}")
                         break
             
-            elif order.status in [bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
+            elif order.status in [bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected, bt.Order.Expired]:
                 for entry_ref in list(self.orders.keys()):
                     if order.ref == entry_ref:
                         self.log(f"入场订单 {order.ref} 被取消，原因: {order.getstatusname()}")

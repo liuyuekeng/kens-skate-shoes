@@ -4,11 +4,11 @@ class Pivots(bt.Indicator):
     lines = ('pivothigh', 'pivotlow')
     params = (('lookback', 3),)  # 移除 threshold 参数
 
-    plotinfo = dict(subplot=False)  # 让指标绘制在主图
-    plotlines = dict(
-        pivothigh=dict(marker='v', markersize=5.0, color='red', fillstyle='full'),
-        pivotlow=dict(marker='^', markersize=5.0, color='blue', fillstyle='full'),
-    )
+    # plotinfo = dict(subplot=False)  # 让指标绘制在主图
+    # plotlines = dict(
+    #     pivothigh=dict(marker='v', markersize=5.0, color='red', fillstyle='full'),
+    #     pivotlow=dict(marker='^', markersize=5.0, color='blue', fillstyle='full'),
+    # )
 
     def __init__(self):
         self.addminperiod(self.p.lookback * 2 + 1)

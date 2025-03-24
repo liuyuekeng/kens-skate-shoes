@@ -68,6 +68,9 @@ if __name__ == '__main__':
     print(f'成功加载数据文件: {data_path}, 数据长度: {data_length}')
     
     cerebro = bt.Cerebro()
+    cerebro.broker.setcommission(commission=0.0008,  # 例如 0.1% 佣金
+                             commtype=bt.CommInfoBase.COMM_PERC)  # 按百分比计算
+
     cerebro.addstrategy(ConfirmSignalStrategy)
     data = CSVData(dataname=temp_path)
     cerebro.adddata(data)
