@@ -1,5 +1,6 @@
 import backtrader as bt
 import math
+import datetime
 
 from indicators.pivots import Pivots
 from indicators.std_dev_range import BuySellSignal, ConsolidationDuration, ConsolidationIndicator
@@ -50,11 +51,15 @@ class ConfirmSignalStrategy(bt.Strategy):
         return highs, lows
 
     def next(self):
+        if self.confirm_signal[0] == 0:
+            return
+        
+        self.log(f"signal: {self.confirm_signal[0]}");
+
         if self.has_open_position():
             return
 
-        if self.confirm_signal[0] == 0:
-            return
+        self.log(f"no open position");
 
         upper, lower = self.find_breakout_zone()
         if upper is None or lower is None:
@@ -70,6 +75,8 @@ class ConfirmSignalStrategy(bt.Strategy):
         
         risk = abs(entry_price - stop_loss_price)
         reward = abs(target_price - entry_price)
+
+        self.log(f"reward / risk: {reward / risk}");
         
         if reward / risk < 1:
             return
@@ -81,10 +88,11 @@ class ConfirmSignalStrategy(bt.Strategy):
         max_size = cash / entry_price
         size = min(size, max_size)
         direction = "买入" if self.confirm_signal[0] > 0 else "卖出"
+
+        valid_until = self.datas[0].datetime.datetime(0) + datetime.timedelta(minutes=10)
         
-        
-        entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False) if self.confirm_signal[0] > 0 \
-                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False, valid=2)
+        entry_order = self.buy(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False, valid=valid_until) if self.confirm_signal[0] > 0 \
+                      else self.sell(price=entry_price, size=size, exectype=bt.Order.Stop, transmit=False, valid=valid_until)
 
         self.log(f"设定入场订单{entry_order.ref}: 价格={entry_price:.2f}, 方向={direction}, 金额={size * entry_price:.2f}")
         
@@ -100,7 +108,7 @@ class ConfirmSignalStrategy(bt.Strategy):
         
     
     def notify_order(self, order):
-        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
+        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected, bt.Order.Expired]:
             order_type = "入场订单" if order.ref in self.orders else \
                         "止盈订单" if any(order.ref == v[1] for v in self.orders.values()) else \
                         "止损订单"
