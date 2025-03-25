@@ -100,7 +100,7 @@ class ConfirmSignalStrategy(bt.Strategy):
         
     
     def notify_order(self, order):
-        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected]:
+        if order.status in [bt.Order.Completed, bt.Order.Canceled, bt.Order.Margin, bt.Order.Rejected, bt.Order.Expired]:
             order_type = "入场订单" if order.ref in self.orders else \
                         "止盈订单" if any(order.ref == v[1] for v in self.orders.values()) else \
                         "止损订单"
