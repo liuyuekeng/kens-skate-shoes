@@ -6,6 +6,7 @@ import argparse
 import os
 import pandas as pd
 from indicators import MarketPhase, PhaseLength
+from indicators.k_means_range import KMeansRange
 from indicators.market_phase import KlineMarketPhase, PivotMarketPhase
 from indicators.pivots import Pivots
 
@@ -14,6 +15,7 @@ from bokeh.models import ColumnDataSource
 
 from indicators.range_zone import RangeZone, RangeZonePhaseIndicator
 from indicators import StdDevRange, ConsolidationIndicator
+from indicators.std_dev_histogram_range import StdDevHistogramRange
 from indicators.std_dev_range import BuySellSignal, ConsolidationDuration, LinearRegressionTrend
 from strategies import ConfirmSignalStrategy
 
@@ -42,9 +44,11 @@ class MyStrategy(bt.Strategy):
         # self.range_zone_phase = RangeZonePhaseIndicator(self.data);
         # self.std_dev_range = StdDevRange(self.data)
         # self.linear_regression_trend = LinearRegressionTrend(self.data)
-        self.consolidation_indicator = ConsolidationIndicator(self.data)
-        self.consolidation_duration = ConsolidationDuration(self.data)
-        self.buy_sell_signal = BuySellSignal(self.data)
+        # self.consolidation_indicator = ConsolidationIndicator(self.data)
+        # self.consolidation_duration = ConsolidationDuration(self.data)
+        # self.buy_sell_signal = BuySellSignal(self.data)
+        # self.k_means = KMeansRange(self.data)
+        self.std_dev_histogram_range = StdDevHistogramRange(self.data)
 
     # def next(self):
 
@@ -72,6 +76,8 @@ if __name__ == '__main__':
                              commtype=bt.CommInfoBase.COMM_PERC)  # 按百分比计算
 
     cerebro.addstrategy(ConfirmSignalStrategy)
+    # cerebro.addstrategy(MyStrategy)
+
     data = CSVData(dataname=temp_path)
     cerebro.adddata(data)
     cerebro.run()

@@ -9,7 +9,7 @@ from indicators.natr import NormalizedATR
 
 class StdDevRange(bt.Indicator):
     lines = ('is_consolidating',)
-    params = (('period', 20), ('k', 2.3), ('scale_factor', 0.1))
+    params = (('period', 20), ('k', 2.3))
     plotinfo = dict(subplot=True)  # 在子图中显示
 
     def __init__(self):
@@ -99,9 +99,6 @@ class ConsolidationDuration(bt.Indicator):
 
         self.lines.duration[0] = self.counter
 
-import backtrader as bt
-import math
-
 class BuySellSignal(bt.Indicator):
     lines = ('suspect_signal', 'confirm_signal')
     plotinfo = dict(subplot=True)
@@ -131,7 +128,6 @@ class BuySellSignal(bt.Indicator):
             elif self.lines.suspect_signal[-1] == -1 and close <= (low + (high - low) * (1 - self.p.close_threshold)):
                 self.lines.confirm_signal[0] = -2
                 return
-
         
         # 过滤 ConsolidationDuration，前一个 K 线需要大于等于 20
         if self.consolidation_duration[-1] < self.p.duration_threshold:

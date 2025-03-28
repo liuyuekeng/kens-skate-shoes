@@ -8,3 +8,5 @@ from .market_phase import MarketPhase, PhaseLength
 from .std_dev_range import StdDevRange, ConsolidationIndicator, ConsolidationDuration, BuySellSignal
 from .natr import NormalizedATR
 from .linear_regression_slope_pct import LinearRegressionSlopePct
+from .k_means_range import KMeansRange
+from .std_dev_histogram_range import StdDevHistogramRange

@@ -4,6 +4,7 @@ import datetime
 
 from indicators.pivots import Pivots
 from indicators.std_dev_range import BuySellSignal, ConsolidationDuration, ConsolidationIndicator
+# from indicators.std_dev_histogram_range import BuySellSignal, ConsolidationDuration, ConsolidationIndicator
 
 class ConfirmSignalStrategy(bt.Strategy):
     params = (
@@ -72,6 +73,11 @@ class ConfirmSignalStrategy(bt.Strategy):
         entry_price = self.data.high[0] + 0.01 if self.confirm_signal[0] > 0 else self.data.low[0] - 0.01
         stop_loss_price = min(lows) if self.confirm_signal[0] > 0 else max(highs)
         target_price = upper + (upper - lower) if self.confirm_signal[0] > 0 else lower - (upper - lower)
+
+        # TODO: 检查 entry_price 是否已经超出 target_price
+        if (self.confirm_signal[0] > 0 and entry_price >= target_price) or (self.confirm_signal[0] < 0 and entry_price <= target_price):
+            self.log(f"⚠️ 目标价格 {target_price:.2f} 低于/高于入场价格 {entry_price:.2f}，请检查交易逻辑")
+            return
         
         risk = abs(entry_price - stop_loss_price)
         reward = abs(target_price - entry_price)
