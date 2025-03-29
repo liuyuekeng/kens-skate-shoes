@@ -9,7 +9,7 @@ from indicators.natr import NormalizedATR
 
 class StdDevRange(bt.Indicator):
     lines = ('is_consolidating',)
-    params = (('period', 20), ('k', 2.3))
+    params = (('period', 50), ('k', 3))
     plotinfo = dict(subplot=True)  # 在子图中显示
 
     def __init__(self):
@@ -104,7 +104,7 @@ class BuySellSignal(bt.Indicator):
     plotinfo = dict(subplot=True)
     
     params = (
-        ('duration_threshold', 20),
+        ('duration_threshold', 100),
         ('close_threshold', 0.5),
     )
     
@@ -117,44 +117,52 @@ class BuySellSignal(bt.Indicator):
         self.lines.suspect_signal[0] = 0
         self.lines.confirm_signal[0] = 0
         close = self.data.close[0]
-        # 判断确认信号
-        if self.lines.suspect_signal[-1] != 0:
-            high = self.data.high[0]
-            low = self.data.low[0]
-            
-            if self.lines.suspect_signal[-1] == 1 and close >= (high - (high - low) * (1 - self.p.close_threshold)):
-                self.lines.confirm_signal[0] = 2
-                return
-            elif self.lines.suspect_signal[-1] == -1 and close <= (low + (high - low) * (1 - self.p.close_threshold)):
-                self.lines.confirm_signal[0] = -2
-                return
+        high = self.data.high[0]
+        low = self.data.low[0]
         
+        def is_confirm_signal(suspect_direction):
+            """判断是否满足确认信号条件"""
+            if suspect_direction == 1:
+                return close >= (high - (high - low) * (1 - self.p.close_threshold))
+            elif suspect_direction == -1:
+                return close <= (low + (high - low) * (1 - self.p.close_threshold))
+            return False
+
+        # 直接确认 `-1` 线的 `suspect_signal`
+        if self.lines.suspect_signal[-1] != 0 and is_confirm_signal(self.lines.suspect_signal[-1]):
+            self.lines.confirm_signal[0] = 2 if self.lines.suspect_signal[-1] == 1 else -2
+            return
+
+        # **新增 `-2` 线 suspect_signal 逻辑**
+        if self.lines.suspect_signal[-2] != 0:
+            bar_strength_m1 = self.bar_strength[-1]
+            direction_m1 = 1 if self.data.close[-1] > self.data.open[-1] else -1
+            suspect_direction_m2 = self.lines.suspect_signal[-2]
+
+            # `-1` 线方向与 `-2` 线方向一致，或者方向相反但强度不高（<2）
+            if (direction_m1 == suspect_direction_m2) or (direction_m1 != suspect_direction_m2 and bar_strength_m1 < 2):
+                if is_confirm_signal(suspect_direction_m2):
+                    self.lines.confirm_signal[0] = 2 if suspect_direction_m2 == 1 else -2
+                    return
+
         # 过滤 ConsolidationDuration，前一个 K 线需要大于等于 20
         if self.consolidation_duration[-1] < self.p.duration_threshold:
             return
-        
+
         # 当前 K 线是否仍处于震荡区间
         if not (math.isnan(self.consolidation_indicator.consol_upper[0]) or 
                 math.isnan(self.consolidation_indicator.consol_lower[0])):
             return
-        
+
         # 判断当前 K 线收盘价是否超出前一个 K 线的震荡区间
         prev_upper = self.consolidation_indicator.consol_upper[-1]
         prev_lower = self.consolidation_indicator.consol_lower[-1]
-        if math.isnan(prev_upper) or math.isnan(prev_lower):
+        if math.isnan(prev_upper) or math.isnan(prev_lower) or (prev_lower <= close <= prev_upper):
             return
-        
-        if close <= prev_upper and close >= prev_lower:
-            return
-        
+
         # 判断当前 K 线的强度是否大于 1
         if self.bar_strength[0] <= 1:
             return
-        
+
         # 设置疑似信号标记
-        if close > prev_upper:
-            self.lines.suspect_signal[0] = 1
-        elif close < prev_lower:
-            self.lines.suspect_signal[0] = -1
-        
-        
+        self.lines.suspect_signal[0] = 1 if close > prev_upper else -1

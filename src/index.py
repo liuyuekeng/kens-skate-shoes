@@ -64,7 +64,12 @@ if __name__ == '__main__':
     
     df = pd.read_csv(data_path)
     # df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], unit='ms')  # 仅转换为 datetime，不格式化
-    df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], unit='ms').astype('datetime64[ns]')
+    df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], unit='ms')
+
+    start_date = '2024-06-26'
+    end_date = '2024-07-28'
+    df = df[(df.iloc[:, 0] >= start_date) & (df.iloc[:, 0] <= end_date)]
+
     temp_path = os.path.join('data', f'temp_{args.symbol}_candlesticks.csv')
     df.to_csv(temp_path, index=False, date_format='%Y-%m-%d %H:%M:%S')  # 确保 CSV 保存时格式正确
     
