@@ -1,2 +1,15 @@
-venv/*
+# Python 缓存
+*.py[cod]
+__pycache__/
+
+# 虚拟环境
+env/
+venv/
+ENV/
+
+# VSCode 配置（如果你不希望上传 .vscode）
+.vscode/
+
+# 系统文件
 .DS_Store
+Thumbs.db
